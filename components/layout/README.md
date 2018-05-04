@@ -2,7 +2,7 @@
 
 Layout component for [A-Frame](https://aframe.io).
 
-![](https://cloud.githubusercontent.com/assets/674727/11851982/662a8dee-a3ea-11e5-92cf-4b814e2c494d.png)
+![Layout](https://cloud.githubusercontent.com/assets/674727/21413536/eb325152-c7ac-11e6-8f1b-3a5f4714dfbe.png)
 
 Automatically positions child entities in 3D space, with several layouts to
 choose from. Define the layout on the parent entity:
@@ -40,12 +40,18 @@ We move then entire group around while maintaining the layout:
 
 ### Properties
 
-| Property  | Description                                                                               | Default Value |
-| --------- | -----------                                                                               | ------------- |
-| type      | Type of layout. Can be one of `box`, `circle`, `cube`, `dodecahedron`, `line`, `pyramid`. | `line`        |
-| column    | Number of columns (for type `box`).                                                       | 1             |
-| margin    | Margin in meters (for type `box`, `line`).                                                | 1             |
-| radius    | Radius in meters (for type `circle`, `cube`, `dodecahedron`, `pyramid`.                   | 1             |
+| Property     | Description                                                                                         | Default Value |
+|--------------|-----------------------------------------------------------------------------------------------------|---------------|
+| type         | Type of layout. Can be one of `box`, `circle`, `cube`, `dodecahedron`, `line`, `pyramid`.           | `line`        |
+| columns      | Number of columns (for type `box`).                                                                 | 1             |
+| margin       | Margin in meters (for type `box`, `line`).                                                          | 1             |
+| marginColumn | Margin in meters just for the columns (for type `box`). Defaults to `margin` value.                 | 1             |
+| marginRow    | Margin in meters just for the rows (for type `box`). Defaults to `margin` value.                    | 1             |
+| plane        | Which plane direction for 2D layout. Can be `xy`, `yz`, or `xz` (for type `box`, `circle`, `line`)  | `xy`          |
+| radius       | Radius in meters (for type `circle`, `cube`, `dodecahedron`, `pyramid`.                             | 1             |
+| reverse      | Whether to reverse direction of layout.                                                             | false         |
+| angle        | For type `circle`, set this to position items `angle` degrees apart                                 | false         |
+| align        | Alignment of the center of layout (for type `box`, `line`). Can be one of `start`, `center`, `end`. | `start`       |
 
 ### Usage
 
@@ -56,8 +62,8 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.2.0/aframe.min.js"></script>
-  <script src="https://rawgit.com/ngokevin/aframe-layout-component/master/dist/aframe-layout-component.min.js"></script>
+  <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-layout-component@4.2/dist/aframe-layout-component.min.js"></script>
 </head>
 
 <body>

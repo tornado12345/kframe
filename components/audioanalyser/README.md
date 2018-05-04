@@ -22,6 +22,7 @@ Not tested on mobile.
 | enableWaveform        | Whether or not to store waveform data. Disable if not using.         | true          |
 | fftSize               | Frequency domain.                                                    | 2048          |
 | smoothingTimeConstant | How smooth the frequency data is returned.                           | 0.8           |
+| src                   | Selector to an audio element or path to audio file.                  | ''            |
 | unique                | Whether to share the audio instance with other visualizing entities. | false         |
 
 ### Members
@@ -56,7 +57,7 @@ Install and use by directly including the [browser files](dist):
 <head>
   <title>Audio Visualizer</title>
   <script src="https://aframe.io/releases/0.3.1/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-audioanalyser-component/dist/aframe-audioanalyser-components.min.js"></script>
+  <script src="https://unpkg.com/aframe-audioanalyser-component@^3.0.3/dist/aframe-audioanalyser-component.min.js"></script>
 </head>
 
 <body>
@@ -65,7 +66,7 @@ Install and use by directly including the [browser files](dist):
       <audio id="song" src="rickroll.mp3" autoplay loop></audio>
     </a-assets>
     <a-entity
-      audio-analyser="#song"
+      audioanalyser="src: #song"
       component-that-does-stuff-with-audio-analyser-data
     ></a-entity>
   </a-scene>

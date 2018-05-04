@@ -72,12 +72,13 @@ AFRAME.registerComponent('template', {
       templateData[key] = el.dataset[key];
     });
     if (data.data) {
-      templateData = extend(templateData, el.getComputedAttribute(data.data));
+      templateData = extend(templateData, el.getAttribute(data.data));
     }
 
     var renderedTemplate = renderTemplate(templateCacheItem.template, templateCacheItem.type,
                                           templateData);
     el.insertAdjacentHTML(data.insert, renderedTemplate);
+    el.emit('templaterendered');
   }
 });
 
@@ -112,8 +113,6 @@ function renderTemplate (template, type, context) {
     }
     default: {
       // If type not specified, assume HTML. Add some ES6 template string sugar.
-      console.log(template);
-      console.log(context);
       return templateString(template, context);
     }
   }
@@ -183,7 +182,7 @@ function getCompiler (type) {
       return compileJadeTemplate;
     }
     case MUSTACHE: {
-      return compileHandlebarsTemplate;
+      return compileMustacheTemplate;
     }
     case NUNJUCKS: {
       return compileNunjucksTemplate;

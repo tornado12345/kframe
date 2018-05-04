@@ -4,6 +4,8 @@
 
 A Firebase component for [A-Frame](https://aframe.io).
 
+![](https://cloud.githubusercontent.com/assets/674727/24439774/2640bef6-1405-11e7-90d7-c39b4f876ce1.png)
+
 Comes with a Firebase broadcast component for multiuser experiences
 out-of-the-box by syncing entities' component data to Firebase realtime
 database. The parent-child relationships between entities are maintained as
@@ -85,7 +87,7 @@ Install and use by directly including the [browser files](dist):
 <head>
   <title>My A-Frame Scene</title>
   <script src="https://aframe.io/releases/0.3.0/aframe.min.js"></script>
-  <script src="https://rawgit.com/ngokevin/aframe-firebase-component/master/dist/aframe-firebase-component.min.js"></script>
+  <script src="https://unpkg.com/aframe-firebase-component@^4.0.0/dist/aframe-firebase-component.min.js"></script>
 </head>
 
 <body>

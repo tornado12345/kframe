@@ -42,7 +42,7 @@
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Layout component for A-Frame.
@@ -50,14 +50,17 @@
 	 */
 	AFRAME.registerComponent('layout', {
 	  schema: {
+	    angle: {type: 'number', default: false, min: 0, max: 360, if: {type: ['circle']}},
 	    columns: {default: 1, min: 0, if: {type: ['box']}},
-	    margin: {default: 1, min: 0, if: { type: ['box', 'line']}},
-	    radius: {default: 1, min: 0, if: {
-	      type: ['circle', 'cube', 'dodecahedron', 'pyramid']
-	    }},
-	    type: {default: 'line', oneOf: [
-	      'box', 'circle', 'cube', 'dodecahedron', 'line', 'pyramid'
-	    ]}
+	    margin: {default: 1, min: 0, if: {type: ['box', 'line']}},
+	    marginColumn: {default: 1, min: 0, if: {type: ['box']}},
+	    marginRow: {default: 1, min: 0, if: {type: ['box']}},
+	    plane: {default: 'xy'},
+	    radius: {default: 1, min: 0, if: {type: ['circle', 'cube', 'dodecahedron', 'pyramid']}},
+	    reverse: {default: false},
+	    type: {default: 'line', oneOf: ['box', 'circle', 'cube', 'dodecahedron', 'line',
+	                                    'pyramid']},
+	    fill: {default: true, if: {type: ['circle']}}
 	  },
 
 	  /**
@@ -74,7 +77,7 @@
 	      if (childEl.hasLoaded) { return _getPositions(); }
 	      childEl.addEventListener('loaded', _getPositions);
 	      function _getPositions () {
-	        var position = childEl.getComputedAttribute('position');
+	        var position = childEl.getAttribute('position');
 	        self.initialPositions.push([position.x, position.y, position.z]);
 	      }
 	    });
@@ -85,6 +88,14 @@
 	      self.children.push(evt.detail.el);
 	      self.update();
 	    });
+
+	    el.addEventListener('child-detached', function (evt) {
+	      // Only update if direct child detached.
+	      if (self.children.indexOf(evt.detail.el) === -1) { return; }
+	      self.children.splice(self.children.indexOf(evt.detail.el), 1);
+	      self.initialPositions.splice(self.children.indexOf(evt.detail.el), 1);
+	      self.update();
+	    });
 	  },
 
 	  /**
@@ -93,11 +104,11 @@
 	  update: function (oldData) {
 	    var children = this.children;
 	    var data = this.data;
+	    var definedData;
 	    var el = this.el;
 	    var numChildren = children.length;
 	    var positionFn;
 	    var positions;
-	    var startPosition = el.getComputedAttribute('position');
 
 	    // Calculate different positions based on layout shape.
 	    switch (data.type) {
@@ -127,7 +138,14 @@
 	      }
 	    }
 
-	    positions = positionFn(data, numChildren, startPosition);
+	    definedData = el.getDOMAttribute('layout');
+	    positions = positionFn(
+	      data, numChildren,
+	      typeof definedData === 'string'
+	      ? definedData.indexOf('margin') !== -1
+	      : 'margin' in definedData
+	    );
+	    if (data.reverse) { positions.reverse(); }
 	    setPositions(children, positions);
 	  },
 
@@ -143,17 +161,36 @@
 	/**
 	 * Get positions for `box` layout.
 	 */
-	function getBoxPositions (data, numChildren, startPosition) {
+	function getBoxPositions (data, numChildren, marginDefined) {
+	  var marginColumn;
+	  var marginRow;
+	  var position;
 	  var positions = [];
 	  var rows = Math.ceil(numChildren / data.columns);
 
+	  marginColumn = data.marginColumn;
+	  marginRow = data.marginRow;
+	  if (marginDefined) {
+	    marginColumn = data.margin;
+	    marginRow = data.margin;
+	  }
+
 	  for (var row = 0; row < rows; row++) {
 	    for (var column = 0; column < data.columns; column++) {
-	      positions.push([
-	        column * data.margin,
-	        row * data.margin,
-	        0
-	      ]);
+	      position = [0, 0, 0];
+	      if (data.plane.indexOf('x') === 0) {
+	        position[0] = column * marginColumn;
+	      }
+	      if (data.plane.indexOf('y') === 0) {
+	        position[1] = column * marginColumn;
+	      }
+	      if (data.plane.indexOf('y') === 1) {
+	        position[1] = row * marginRow;
+	      }
+	      if (data.plane.indexOf('z') === 1) {
+	        position[2] = row * marginRow;
+	      }
+	      positions.push(position);
 	    }
 	  }
 
@@ -163,18 +200,33 @@
 
 	/**
 	 * Get positions for `circle` layout.
-	 * TODO: arcLength.
 	 */
-	function getCirclePositions (data, numChildren, startPosition) {
+	function getCirclePositions (data, numChildren) {
 	  var positions = [];
 
 	  for (var i = 0; i < numChildren; i++) {
-	    var rad = i * (2 * Math.PI) / numChildren;
-	    positions.push([
-	      startPosition.x + data.radius * Math.cos(rad),
-	      startPosition.y,
-	      startPosition.z + data.radius * Math.sin(rad)
-	    ]);
+	    var rad;
+
+	    if (isNaN(data.angle)) {
+	      rad = i * (2 * Math.PI) / numChildren;
+	    } else {
+	      rad = i * data.angle * 0.01745329252;  // Angle to radian.
+	    }
+
+	    var position = [];
+	    if (data.plane.indexOf('x') === 0) {
+	      position[0] = data.radius * Math.cos(rad);
+	    }
+	    if (data.plane.indexOf('y') === 0) {
+	      position[1] = data.radius * Math.cos(rad);
+	    }
+	    if (data.plane.indexOf('y') === 1) {
+	      position[1] = data.radius * Math.sin(rad);
+	    }
+	    if (data.plane.indexOf('z') === 1) {
+	      position[2] = data.radius * Math.sin(rad);
+	    }
+	    positions.push(position);
 	  }
 	  return positions;
 	}
@@ -184,16 +236,16 @@
 	 * Get positions for `line` layout.
 	 * TODO: 3D margins.
 	 */
-	function getLinePositions (data, numChildren, startPosition) {
+	function getLinePositions (data, numChildren) {
 	  data.columns = numChildren;
-	  return getBoxPositions(data, numChildren, startPosition);
+	  return getBoxPositions(data, numChildren, true);
 	}
 	module.exports.getLinePositions = getLinePositions;
 
 	/**
 	 * Get positions for `cube` layout.
 	 */
-	function getCubePositions (data, numChildren, startPosition) {
+	function getCubePositions (data, numChildren) {
 	  return transform([
 	    [1, 0, 0],
 	    [0, 1, 0],
@@ -201,14 +253,14 @@
 	    [-1, 0, 0],
 	    [0, -1, 0],
 	    [0, 0, -1],
-	  ], startPosition, data.radius / 2);
+	  ], data.radius / 2);
 	}
 	module.exports.getCubePositions = getCubePositions;
 
 	/**
 	 * Get positions for `dodecahedron` layout.
 	 */
-	function getDodecahedronPositions (data, numChildren, startPosition) {
+	function getDodecahedronPositions (data, numChildren) {
 	  var PHI = (1 + Math.sqrt(5)) / 2;
 	  var B = 1 / PHI;
 	  var C = 2 - PHI;
@@ -236,14 +288,14 @@
 	    [NB, NB, NB],
 	    [NC, 0, 1],
 	    [NC, 0, -1],
-	  ], startPosition, data.radius / 2);
+	  ], data.radius / 2);
 	}
 	module.exports.getDodecahedronPositions = getDodecahedronPositions;
 
 	/**
 	 * Get positions for `pyramid` layout.
 	 */
-	function getPyramidPositions (data, numChildren, startPosition) {
+	function getPyramidPositions (data, numChildren) {
 	  var SQRT_3 = Math.sqrt(3);
 	  var NEG_SQRT_1_3 = -1 / Math.sqrt(3);
 	  var DBL_SQRT_2_3 = 2 * Math.sqrt(2 / 3);
@@ -253,7 +305,7 @@
 	    [-1, 0, NEG_SQRT_1_3],
 	    [1, 0, NEG_SQRT_1_3],
 	    [0, DBL_SQRT_2_3, 0]
-	  ], startPosition, data.radius / 2);
+	  ], data.radius / 2);
 	}
 	module.exports.getPyramidPositions = getPyramidPositions;
 
@@ -263,11 +315,10 @@
 	 * @params {array} positions - Array of coordinates in array form.
 	 * @returns {array} positions
 	 */
-	function transform (positions, translate, scale) {
-	  translate = [translate.x, translate.y, translate.z];
+	function transform (positions, scale) {
 	  return positions.map(function (position) {
 	    return position.map(function (point, i) {
-	      return point * scale + translate[i];
+	      return point * scale;
 	    });
 	  });
 	};
@@ -290,5 +341,5 @@
 	}
 
 
-/***/ }
+/***/ })
 /******/ ]);

@@ -2,13 +2,14 @@
   <head>
     <title>Dodecahedron Layout</title>
     <meta name="description" content="20-sided layout of images facing camera"></meta>
-    <script src="../build.js"></script>
+    <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+    <script src="../../dist/aframe-layout-component.min.js"></script>
   </head>
   <body>
     <a-scene>
       <a-assets>
         <a-mixin id="image" geometry="primitive: plane; height: 5; width: 5"
-                 material="shader: flat" look-at="[camera]"></a-mixin>
+                 material="shader: flat; side: double" look-at="[camera]"></a-mixin>
         <img id="everglades" src="../img/everglades.jpg">
         <img id="lassen" src="../img/lassen.jpg">
         <img id="pinnacles" src="../img/pinnacles.jpg">

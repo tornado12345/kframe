@@ -11,8 +11,10 @@ nunjucks.configure('site/templates');
 
 // Get component data.
 var components = glob.sync('components/*').map(function (componentPath) {
+  if (!fs.existsSync(path.join(componentPath, 'package.json'))) { return; }
+
   // Get component metadata.
-  var json = require(path.join(componentPath, 'package.json'));
+  var json = require('../' + path.join(componentPath, 'package.json'));
 
   // Get examples.
   var examples = glob.sync(path.join(componentPath, 'examples/*/index.html'));
@@ -52,21 +54,10 @@ var components = glob.sync('components/*').map(function (componentPath) {
     relativePath: path.join(componentPath, '/'),
     examples: examples
   };
-});
-
-// Get bundled components.
-var indexJs = fs.readFileSync('index.js', 'utf-8');
-var regex = /components\/(.*)\//g;
-var bundled = [];
-while (match = regex.exec(indexJs)) {
-  bundled.push(match[1]);
-};
+}).filter(component => component);
 
 // Final templating context.
-var ctx = {
-  bundled: bundled,
-  components: components
-};
+var ctx = {components: components};
 
 // Generate README.
 var readme = nunjucks.render('README.md', ctx);

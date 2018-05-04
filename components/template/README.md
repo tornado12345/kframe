@@ -4,6 +4,8 @@ A template component for [A-Frame](https://aframe.io) VR.
 
 Features:
 
+- Simple ES6-style templating
+- Defining context variables via data attributes or from components
 - Agnostic template engine support, choose from popular templating engines
 - Rendering templates before, at the beginning, at the end, or after entities
 - Loading templates defined within script tags
@@ -14,11 +16,28 @@ Features:
 
 Supports:
 
-- Vanilla HTML
-- [Handlebars.js](https://http://handlebarsjs.com/)
-- [Jade](http://jade-lang.com/)
+- Vanilla HTML (with [basic ES6 templating](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals))
+- [Handlebars.js](http://handlebarsjs.com/)
+- [Pug (formerly Jade)](https://pugjs.org)
 - [mustache.js](https://mustache.github.io/)
 - [Nunjucks](https://mozilla.github.io/nunjucks/)
+
+### Basic Example
+
+```html
+<a-scene>
+  <a-assets>
+    <script id="boxesTemplate">
+      <a-box color="${box1color}" position="-1 0 -5"></a-box>
+      <a-box color="${box2color}" position="0 1 -5"></a-box>
+      <a-box color="${box3color}" position="1 0 -5"></a-box>
+    </script>
+  </a-assets>
+
+  <a-entity template="src: #boxesTemplate"
+            data-box1color="red" data-box2color="green" data-box3color="blue"></a-entity>
+</a-scene>
+```
 
 ### Properties
 
@@ -68,8 +87,8 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.3.0/aframe.min.js"></script>
-  <script src="https://rawgit.com/ngokevin/aframe-template-component/master/dist/aframe-template-component.min.js"></script>
+  <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-template-component@^3.2.1/dist/aframe-template-component.min.js"></script>
 </head>
 
 <body>
@@ -124,3 +143,8 @@ Then register and use.
 require('aframe');
 require('aframe-template-component');
 ```
+
+### Troubleshooting
+
+Note if using this within React, make sure the template is defined outside of
+React's root. React will treat the template as actual DOM rather than a string.
