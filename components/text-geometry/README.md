@@ -14,7 +14,7 @@ component wraps
 | bevelSize      |                                                               | 8                                                                                                       |
 | bevelThickness |                                                               | 12                                                                                                      |
 | curveSegments  |                                                               | 12                                                                                                      |
-| font           | Path to a typeface.json file or selector to `<a-asset-item>`. | https://rawgit.com/ngokevin/kframe/master/components/text-geometry/lib/helvetiker_regular.typeface.json |
+| font           | Path to a typeface.json file or selector to `<a-asset-item>`. | https://rawgit.com/supermedium/superframe/master/components/text-geometry/lib/helvetiker_regular.typeface.json |
 | height         |                                                               | 0.05                                                                                                    |
 | size           |                                                               | 0.5                                                                                                     |
 | style          |                                                               | normal                                                                                                  |
@@ -29,8 +29,8 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-text-geometry-component@^0.5.0/dist/aframe-text-geometry-component.min.js"></script>
+  <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
 </head>
 
 <body>
@@ -83,7 +83,7 @@ For example in HTML:
 <html>
   <head>
     <title>My A-Frame Scene</title>
-    <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-text-geometry-component/dist/aframe-text-geometry-component.min.js"></script>
     <script src="myfont.typeface.js"></script>
   </head>
@@ -123,6 +123,6 @@ three.js material to the geometry:
 ```
 
 See the [Vaporwave
-Example](https://ngokevin.github.io/kframe/components/text-geometry/examples/vaporwave/)
+Example](https://supermedium.com/superframe/components/text-geometry/examples/vaporwave/)
 by [Ada Rose Edwards](https://twitter.com/lady_ada_king) for an example on applying
 materials.

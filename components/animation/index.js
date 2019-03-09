@@ -52,6 +52,7 @@ AFRAME.registerComponent('animation', {
     dur: {default: 1000},
     easing: {default: 'easeInQuad'},
     elasticity: {default: 400},
+    enabled: {default: true},
     from: {default: ''},
     loop: {
       default: 0,
@@ -98,15 +99,23 @@ AFRAME.registerComponent('animation', {
       complete: function () {
         self.animationIsPlaying = false;
         self.el.emit('animationcomplete', self.eventDetail);
+        if (self.id) {
+          self.el.emit('animationcomplete__' + self.id, self.eventDetail, false);
+        }
       }
     };
   },
 
-  update: function () {
+  update: function (oldData) {
     var config = this.config;
     var data = this.data;
 
     this.animationIsPlaying = false;
+
+    if (oldData.enabled && !this.data.enabled) {
+      this.animationIsPlaying = false;
+      return;
+    }
 
     if (!data.property) { return; }
 
@@ -135,7 +144,7 @@ AFRAME.registerComponent('animation', {
 
   pause: function () {
     this.paused = true;
-    this.pausedWasPlaying = true;
+    this.pausedWasPlaying = this.animationIsPlaying;
     this.pauseAnimation();
     this.removeEventListeners();
   },
@@ -186,7 +195,6 @@ AFRAME.registerComponent('animation', {
   beginAnimation: function () {
     this.updateConfig();
     this.time = 0;
-    this.animation.seek(0);
     this.animationIsPlaying = true;
     this.stopRelatedAnimations();
     this.el.emit('animationbegin', this.eventDetail);
@@ -204,6 +212,14 @@ AFRAME.registerComponent('animation', {
    * startEvents callback.
    */
   onStartEvent: function () {
+    if (!this.data.enabled) { return; }
+
+    this.updateConfig();
+    if (this.animation) {
+      this.animation.pause();
+    }
+    this.animation = anime(this.config);
+
     // Include the delay before each start event.
     if (this.data.delay) {
       setTimeout(this.beginAnimation, this.data.delay);

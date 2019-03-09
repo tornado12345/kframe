@@ -3,14 +3,14 @@
 [![Version](http://img.shields.io/npm/v/aframe-animation-timeline-component.svg?style=flat-square)](https://npmjs.org/package/aframe-animation-timeline-component)
 [![License](http://img.shields.io/npm/l/aframe-animation-timeline-component.svg?style=flat-square)](https://npmjs.org/package/aframe-animation-timeline-component)
 
-[animation]: https://github.com/ngokevin/kframe/tree/master/components/animation
+[animation]: https://github.com/supermedium/superframe/tree/master/components/animation
 
 A timeline component for A-Frame to use with the [animation
 component][animation] for declaratively defining and orchestrating timelines of
 animations. The animation timeline component depends on the animation
 component. Make sure to include that.
 
-[View Demo](https://ngokevin.github.io/kframe/components/animation-timeline/)
+[View Demo](https://supermedium.com/superframe/components/animation-timeline/)
 
 ![GIF](https://user-images.githubusercontent.com/674727/34067163-d0b3af9c-e1d2-11e7-9b3a-c9c207001e6c.gif)
 
@@ -112,7 +112,7 @@ Latest version requires A-Frame v0.8.0.
 The timeline component provides `<a-timeline>`, `<a-timeline-group>`, and
 `<a-timeline-animation>` to declaratively define the animation timeline.
 
-**`<a-timeline id>">`**
+**`<a-timeline id>`**
 
 Container element. Note `<a-timeline>` is just a data container. It is not an
 entity, primitive, nor does it do anything on its own. It's meant to be selected
@@ -144,7 +144,7 @@ to grab from values dynamically.
 | name      | ID of the animation component instance defined on the entity or entities. If the entity has an animation component `animation__fadein="property: material.opacity` then we would set `name="fadein"`. |
 | offset    | Optional additional time offset in milliseconds to wait for the previous animation in the timeline to finish.                                                                                         |
 
-**`<a-timeline-group [offset]">`**
+**`<a-timeline-group [offset]>`**
 
 `<a-timeline-group>` groups together `<a-timeline-animation>`s that we want to
 start at the same time. Only once every animation in the group finishes will
@@ -184,9 +184,9 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-animation-component@^4.1.1/dist/aframe-animation-timeline-component.min.js"></script>
-  <script src="https://unpkg.com/aframe-animation-timeline-component@^1.3.1/dist/aframe-animation-timeline-component.min.js"></script>
+  <script src="https://unpkg.com/aframe-animation-timeline-component@1.6.0/dist/aframe-animation-timeline-component.min.js"></script>
 </head>
 
 <body>

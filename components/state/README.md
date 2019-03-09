@@ -11,6 +11,10 @@ entities if relevant pieces of the global state are modified.
 
 v2 requires A-Frame v0.8.0.
 
+### Examples
+
+- [BeatSaver Viewer](https://github.com/supermedium/beatsaver-viewer0
+
 ### Usage
 
 #### Defining State
@@ -35,6 +39,10 @@ AFRAME.registerState({
   }
 });
 ```
+
+Best practices is to keep the state purely state (numbers, strings, booleans)
+and functions that act on the state. Don't store or work upon entities in state
+(store IDs instead). State should be serializable and bindable.
 
 #### Modifying State
 
@@ -70,7 +78,7 @@ There's a `bind-toggle` component which will attach and detach a component
 entirely based on a boolean value.
 
 ```html
-<a-entity bind__raycastable="isRaycastable"></a-entity>
+<a-entity bind-toggle__raycastable="isRaycastable"></a-entity>
 ```
 
 #### Expressions
@@ -101,7 +109,8 @@ Comparisons (`==`, `===`, `!=`, `!==`):
 #### Rendering Lists
 
 The state component comes with a `bind-for` component that can render an array
-in state from a template. Say we have an array in state:
+in state from a template. Say we have an array in state (currently must be at
+the root of the state):
 
 ```js
 AFRAME.registerState({
@@ -114,13 +123,16 @@ AFRAME.registerState({
 });
 ```
 
+Note when updating the array in state, use array methods. Don't rewrite the
+array because the state component has wrapped the array to detect changes.
+
 We use `bind-for`. We provide `for` (the iterator variable name), `in` (pointer
 to the array in state), and `name` (name of key representing unique identifier
 between every element). Then we have a `<template>` which will be used to
 render each individual item.
 
 Then we can bind properties to the individual array element either using the
-`bind` component, using the `in` value as the pointer (i.e.,
+`bind` component, using the `for` value as the pointer (i.e.,
 `shoppingItem.name`). Or we can use braces (`{{ }}`), which the `bind-for`
 component will statically interpolate the variable:
 
@@ -223,6 +235,28 @@ AFRAME.registerState({
 });
 ```
 
+#### Optimizing State
+
+If you are storing objects in state that don't need to be checked for changes
+nor binded to entities, then you can optimize the state component on updates as it
+checks for changes. By setting `nonBindedStateKeys` array, on state updates,
+these keys will be skipped when doing state diffing and copying.
+
+```js
+AFRAME.registerState({
+  nonBindedStateKeys: ['starMap'],
+
+  state: {
+    starMap: {
+      alphaCentari: {
+        // ...
+      },
+      // ...
+    }
+  }
+});
+```
+
 ### Installation
 
 #### Browser
@@ -232,8 +266,8 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-state-component@^3.0.0/dist/aframe-state-component.min.js"></script>
+  <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-state-component@6.5.0/dist/aframe-state-component.min.js"></script>
   <script>
     AFRAME.registerState({
       initialState: {

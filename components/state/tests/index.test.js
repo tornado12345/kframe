@@ -1,12 +1,16 @@
 /* global assert, setup, suite, test */
 require('aframe');
-require('../index');
-var array = require('../lib/array');
+require('../src/index');
+var array = require('../src/lib/array');
+var lib = require('../src/lib/');
+var elFactory = require('./helpers').elFactory;
 var entityFactory = require('./helpers').entityFactory;
 
 var initialState = {
   color: 'red',
+  colors: ['red', 'orange', 'yellow'],
   counter: 5,
+  difficulties: [],
   enabled: false,
   shoppingList: [
     {name: 'eggs', amount: 12},
@@ -16,7 +20,9 @@ var initialState = {
     enabled: false,
     enabled2: false
   },
-  position: {x: 0, y: 0, z: 0}
+  position: {x: 0, y: 0, z: 0},
+  initialNull: null,
+  initialUndefined: undefined
 };
 
 AFRAME.registerState({
@@ -61,6 +67,55 @@ AFRAME.registerState({
       state.position.z = payload.position.z;
     },
 
+    colorAdd: (state) => {
+      state.colors.push('green');
+    },
+
+    colorShift: (state) => {
+      state.colors.splice(0, 1);
+    },
+
+    colorReorder: (state) => {
+      state.colors.length = 0;
+      state.colors.push('yellow');
+      state.colors.push('red');
+      state.colors.push('orange');
+    },
+
+    colorReorderRemove: (state) => {
+      state.colors.length = 0;
+      state.colors.push('yellow');
+      state.colors.push('orange');
+    },
+
+    colorReorderAdd: (state) => {
+      state.colors.length = 0;
+      state.colors.push('yellow');
+      state.colors.push('orange');
+      state.colors.push('red');
+      state.colors.push('blue');
+      state.colors.push('green');
+    },
+
+    colorReplace: (state) => {
+      state.colors.length = 0;
+      state.colors.push('blue');
+      state.colors.push('indigo');
+      state.colors.push('violet');
+    },
+
+    difficultyOne: (state) => {
+      state.difficulties.push('Expert');
+    },
+
+    difficultyTwo: (state) => {
+      state.difficulties.length = 0;
+      state.difficulties.push('Easy');
+      state.difficulties.push('Normal');
+      state.difficulties.push('Hard');
+      state.difficulties.push('Expert');
+    },
+
     shoppingListAdd: (state) => {
       state.shoppingList.push({name: 'bananas', amount: 6});
     },
@@ -72,6 +127,13 @@ AFRAME.registerState({
     shoppingListUpdate: (state, payload) => {
       state.shoppingList.find(item => item.name === payload.name).amount = payload.amount;
       state.shoppingList.__dirty = true;
+    },
+
+    shoppingListReplace: (state) => {
+      state.shoppingList.length = 0;
+      state.shoppingList.push({name: 'bread', amount: 1});
+      state.shoppingList.push({name: 'cheese', amount: 2});
+      state.shoppingList.push({name: 'corn', amount: 3});
     }
   },
 
@@ -87,17 +149,10 @@ suite('state', function () {
   var system;
 
   setup(function (done) {
-    el = entityFactory();
-    setTimeout(() => {
-      if (el.sceneEl.hasLoaded) {
-        system = el.sceneEl.systems.state;
-        done();
-        return;
-      }
-      el.sceneEl.addEventListener('loaded', () => {
-        system = el.sceneEl.systems.state;
-        done();
-      });
+    elFactory().then(_el => {
+      el = _el;
+      system = el.sceneEl.systems.state;
+      done();
     });
   });
 
@@ -321,6 +376,35 @@ suite('state', function () {
       delete AFRAME.components.bar;
     });
 
+    test('binds multiple component with double underscore in ID in namespace', done => {
+      // Components.
+      AFRAME.registerComponent('bar', {
+        schema: {
+          barEnabled: {default: false}
+        },
+
+        multiple: true,
+      });
+
+      // Bind.
+      el.setAttribute('bind__bar__foo', 'barEnabled: enabled');
+
+      setTimeout(() => {
+        // Assert initial state bind values.
+        assert.equal(el.getAttribute('bar__foo').barEnabled, false);
+
+        // Dispatch action.
+        el.emit('fooEnable');
+
+        setTimeout(() => {
+          assert.equal(el.getAttribute('bar__foo').barEnabled, true);
+          delete AFRAME.components.bar;
+          done();
+        });
+      });
+    });
+
+
     test('binds non-component attribute', done => {
       el.setAttribute('bind', 'data-enabled: enabled');
       assert.equal(el.getAttribute('data-enabled'), 'false');
@@ -436,11 +520,11 @@ suite('state', function () {
     });
   });
 
-  suite('bind-for', () => {
+  suite('bind-for (naive)', () => {
     setup(() => {
       var template;
       template = document.createElement('template');
-      template.setAttribute('id', 'shoppingItem');
+      template.setAttribute('id', 'shoppingItemTemplate');
       template.innerHTML = `
         <a-entity class="shoppingItem" text="value: {{ shoppingItem.name }}"
                   data-amount="{{ shoppingItem.amount }}"></a-entity>
@@ -448,19 +532,26 @@ suite('state', function () {
       el.sceneEl.appendChild(template);
 
       template = document.createElement('template');
-      template.setAttribute('id', 'shoppingItemTemplate2');
+      template.setAttribute('id', 'colorTemplate');
       template.innerHTML = `
-        <a-entity class="shoppingItem" bind__text="value: shoppingItem.amount"
-                  data-type="{{ shoppingItem.name }}"></a-entity>
+        <a-entity>
+          <a-entity class="color" text="value: {{ color }}" data-color="{{ color }}"></a-entity>
+        </a-entity>
       `;
       el.sceneEl.appendChild(template);
     });
 
-    test('renders list', done => {
+    teardown(() => {
+      while (el.children.length !== 0) {
+        el.removeChild(el.children[0]);
+      }
+    });
+
+    test('renders from list of objects', done => {
       el.setAttribute('bind-for', {
         for: 'shoppingItem',
         in: 'shoppingList',
-        template: '#shoppingItem',
+        template: '#shoppingItemTemplate',
         key: 'name'
       });
       setTimeout(() => {
@@ -470,6 +561,171 @@ suite('state', function () {
         assert.equal(el.children[1].getAttribute('text').value, 'milk');
         assert.equal(el.children[1].dataset.amount, 2);
         done();
+      }, 50);
+    });
+
+    test('renders from list of strings', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        assert.equal(el.children[0].getAttribute('data-bind-for-key'), '0');
+        assert.equal(el.children[1].getAttribute('data-bind-for-key'), '1');
+        assert.equal(el.children[2].getAttribute('data-bind-for-key'), '2');
+        assert.equal(el.children[0].children[0].getAttribute('text').value, 'red');
+        assert.equal(el.children[1].children[0].getAttribute('text').value, 'orange');
+        assert.equal(el.children[2].children[0].getAttribute('text').value, 'yellow');
+        assert.equal(el.children[0].children[0].dataset.color, 'red');
+        assert.equal(el.children[1].children[0].dataset.color, 'orange');
+        assert.equal(el.children[2].children[0].dataset.color, 'yellow');
+        done();
+      });
+    });
+
+    test('can add to list of strings', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorAdd');
+        setTimeout(() => {
+          assert.equal(el.children.length, 4);
+          done();
+        });
+      });
+    });
+
+    test('reset simple list of strings', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReplace');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.children[0].children[0].getAttribute('text').value, 'blue');
+          assert.equal(el.children[1].children[0].getAttribute('text').value, 'indigo');
+          assert.equal(el.children[2].children[0].getAttribute('text').value, 'violet');
+          done();
+        });
+      });
+    });
+
+    test('can remove from list of strings', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorShift');
+        setTimeout(() => {
+          assert.equal(el.children.length, 2, 'what');
+          assert.equal(el.children[0].children[0].getAttribute('text').value, 'orange');
+          assert.equal(el.children[1].children[0].getAttribute('text').value, 'yellow');
+          el.emit('colorAdd');
+          setTimeout(() => {
+            assert.equal(el.children[2].children[0].getAttribute('text').value, 'green');
+            done();
+          });
+        });
+      });
+    });
+
+    test('can reorder list of strings', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        assert.equal(el.children[0].dataset.bindForKey, '0');
+        assert.equal(el.children[0].dataset.bindForValue, 'red');
+        assert.equal(el.children[1].dataset.bindForKey, '1');
+        assert.equal(el.children[1].dataset.bindForValue, 'orange');
+        assert.equal(el.children[2].dataset.bindForKey, '2');
+        assert.equal(el.children[2].dataset.bindForValue, 'yellow');
+        el.emit('colorReorder');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.children[0].dataset.bindForKey, '1');
+          assert.equal(el.children[0].dataset.bindForValue, 'red');
+          assert.equal(el.children[1].dataset.bindForKey, '2');
+          assert.equal(el.children[1].dataset.bindForValue, 'orange');
+          assert.equal(el.children[2].dataset.bindForKey, '0');
+          assert.equal(el.children[2].dataset.bindForValue, 'yellow');
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings with removals', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReorderRemove');
+        setTimeout(() => {
+          assert.equal(el.children.length, 2);
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings with additions', done => {
+      el.setAttribute('bind-for', {
+        for: 'color',
+        in: 'colors',
+        template: '#colorTemplate'
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReorderAdd');
+        setTimeout(() => {
+          assert.equal(el.children.length, 5);
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings (2)', done => {
+      var template = document.createElement('template');
+      template.innerHTML = '<a-entity data-difficulty="{{ difficulty }}"></a-entity>';
+      el.appendChild(template);
+      setTimeout(() => {
+        el.setAttribute('bind-for', {
+          for: 'difficulty',
+          in: 'difficulties'
+        });
+        setTimeout(() => {
+          el.sceneEl.emit('difficultyOne');
+          setTimeout(() => {
+            assert.equal(el.children.length, 2);
+            el.sceneEl.emit('difficultyTwo');
+            setTimeout(() => {
+              assert.equal(el.children.length, 5);
+              assert.ok(el.querySelector('[data-difficulty="Easy"][data-bind-for-key="0"]'), 'e');
+              assert.ok(el.querySelector('[data-difficulty="Normal"][data-bind-for-key="1"]'), 'n');
+              assert.ok(el.querySelector('[data-difficulty="Hard"][data-bind-for-key="2"]'), 'h');
+              assert.ok(el.querySelector('[data-difficulty="Expert"][data-bind-for-key="3"]'), 'ex');
+              done();
+            });
+          });
+        });
       });
     });
 
@@ -477,7 +733,7 @@ suite('state', function () {
       el.setAttribute('bind-for', {
         for: 'shoppingItem',
         in: 'shoppingList',
-        template: '#shoppingItem',
+        template: '#shoppingItemTemplate',
         key: 'name'
       });
       setTimeout(() => {
@@ -495,7 +751,7 @@ suite('state', function () {
       el.setAttribute('bind-for', {
         for: 'shoppingItem',
         in: 'shoppingList',
-        template: '#shoppingItem',
+        template: '#shoppingItemTemplate',
         key: 'name'
       });
       el.sceneEl.emit('shoppingListRemove');
@@ -505,13 +761,330 @@ suite('state', function () {
         done();
       });
     });
+  });
 
-    test('can bind to item', done => {
+  suite('bind-for (in place)', () => {
+    setup(() => {
+      var template;
+      template = document.createElement('template');
+      template.setAttribute('id', 'shoppingItemTemplate');
+      template.innerHTML = `
+        <a-entity class="shoppingItem"
+                  bind-item__text="value: item.name"
+                  bind-item__data-amount="item.amount"></a-entity>
+      `;
+      el.sceneEl.appendChild(template);
+
+      template = document.createElement('template');
+      template.setAttribute('id', 'shoppingItemTemplate2');
+      template.innerHTML = `
+        <a-entity class="shoppingItem"
+                  bind-item__text="value: item.amount"
+                  bind-item__data-type="item.name"></a-entity>
+      `;
+      el.sceneEl.appendChild(template);
+
+      template = document.createElement('template');
+      template.setAttribute('id', 'colorTemplate');
+      template.innerHTML = `
+        <a-entity>
+          <a-entity class="color" bind-item__text="value: item" bind-item__data-color="item"></a-entity>
+        </a-entity>
+      `;
+      el.sceneEl.appendChild(template);
+    });
+
+    teardown(() => {
+      while (el.children.length !== 0) {
+        el.removeChild(el.children[0]);
+      }
+    });
+
+    test('renders from list of objects (in place)', done => {
       el.setAttribute('bind-for', {
-        for: 'shoppingItem',
+        for: 'item',
+        in: 'shoppingList',
+        template: '#shoppingItemTemplate',
+        key: 'name',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.ok(el.children.length, 2);
+        assert.equal(el.children[0].getAttribute('text').value, 'eggs');
+        assert.equal(el.children[0].dataset.amount, 12);
+        assert.equal(el.children[1].getAttribute('text').value, 'milk');
+        assert.equal(el.children[1].dataset.amount, 2);
+        done();
+      }, 50);
+    });
+
+    test('updates in place (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'shoppingList',
+        template: '#shoppingItemTemplate',
+        key: 'name',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.ok(el.children.length, 2);
+        el.emit('shoppingListReplace');
+        setTimeout(() => {
+          assert.ok(el.children.length, 3);
+          assert.equal(el.children[0].getAttribute('data-bind-for-key'), 'bread');
+          assert.equal(el.children[0].getAttribute('data-bind-for-active'), 'true');;
+          assert.equal(el.children[0].getAttribute('text').value, 'bread');
+          assert.equal(el.children[0].dataset.amount, 1);
+          assert.ok(el.children[0].isPlaying);
+
+          assert.equal(el.children[1].getAttribute('data-bind-for-key'), 'cheese');
+          assert.equal(el.children[1].getAttribute('data-bind-for-active'), 'true');;
+          assert.equal(el.children[1].getAttribute('text').value, 'cheese');
+          assert.equal(el.children[1].dataset.amount, 2);
+          assert.ok(el.children[1].isPlaying);
+
+          assert.equal(el.children[2].getAttribute('data-bind-for-key'), 'corn');
+          assert.equal(el.children[2].getAttribute('data-bind-for-active'), 'true');;
+          assert.equal(el.children[2].getAttribute('text').value, 'corn');
+          assert.equal(el.children[2].dataset.amount, 3);
+          assert.ok(el.children[2].isPlaying);
+          done();
+        }, 50);
+      }, 50);
+    });
+
+    test('renders from list of strings (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        assert.equal(el.children[0].getAttribute('data-bind-for-key'), '0');
+        assert.equal(el.children[1].getAttribute('data-bind-for-key'), '1');
+        assert.equal(el.children[2].getAttribute('data-bind-for-key'), '2');
+        assert.equal(el.children[0].children[0].getAttribute('text').value, 'red');
+        assert.equal(el.children[1].children[0].getAttribute('text').value, 'orange');
+        assert.equal(el.children[2].children[0].getAttribute('text').value, 'yellow');
+        assert.equal(el.children[0].children[0].dataset.color, 'red');
+        assert.equal(el.children[1].children[0].dataset.color, 'orange');
+        assert.equal(el.children[2].children[0].dataset.color, 'yellow');
+        done();
+      });
+    });
+
+    test('can add to list of strings (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorAdd');
+        setTimeout(() => {
+          assert.equal(el.children.length, 4);
+          done();
+        });
+      });
+    });
+
+    test('reset simple list of strings (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReplace');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.children[0].children[0].getAttribute('text').value, 'blue');
+          assert.equal(el.children[1].children[0].getAttribute('text').value, 'indigo');
+          assert.equal(el.children[2].children[0].getAttribute('text').value, 'violet');
+          done();
+        });
+      });
+    });
+
+    test('can remove from list of strings (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorShift');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.children[0].getAttribute('data-bind-for-active'), 'false');
+          assert.equal(el.children[1].children[0].getAttribute('text').value, 'orange');
+          assert.equal(el.children[2].children[0].getAttribute('text').value, 'yellow');
+          el.emit('colorAdd');
+          setTimeout(() => {
+            assert.equal(el.children[0].getAttribute('data-bind-for-active'), 'true');
+            assert.equal(el.children[0].children[0].getAttribute('text').value, 'green');
+            done();
+          });
+        });
+      });
+    });
+
+    test('can reorder list of strings (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        assert.equal(el.children[0].dataset.bindForKey, '0');
+        assert.equal(el.children[0].dataset.bindForValue, 'red');
+        assert.equal(el.children[1].dataset.bindForKey, '1');
+        assert.equal(el.children[1].dataset.bindForValue, 'orange');
+        assert.equal(el.children[2].dataset.bindForKey, '2');
+        assert.equal(el.children[2].dataset.bindForValue, 'yellow');
+        el.emit('colorReorder');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.children[0].dataset.bindForKey, '1', 'After reorder',);
+          assert.equal(el.children[0].dataset.bindForValue, 'red');
+          assert.equal(el.children[1].dataset.bindForKey, '2');
+          assert.equal(el.children[1].dataset.bindForValue, 'orange');
+          assert.equal(el.children[2].dataset.bindForKey, '0');
+          assert.equal(el.children[2].dataset.bindForValue, 'yellow');
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings with removals (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReorderRemove');
+        setTimeout(() => {
+          assert.equal(el.children.length, 3);
+          assert.equal(el.querySelectorAll('[data-bind-for-active="false"]').length, 1);
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings with additions (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'colors',
+        template: '#colorTemplate',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        assert.equal(el.children.length, 3);
+        el.emit('colorReorderAdd');
+        setTimeout(() => {
+          assert.equal(el.children.length, 5);
+          done();
+        });
+      });
+    });
+
+    test('can reorder list of strings (2) (in place)', done => {
+      var template = document.createElement('template');
+      template.innerHTML = '<a-entity data-difficulty="{{ difficulty }}"></a-entity>';
+      el.appendChild(template);
+      setTimeout(() => {
+        el.setAttribute('bind-for', {
+          for: 'difficulty',
+          in: 'difficulties',
+          updateInPlace: true
+        });
+        setTimeout(() => {
+          el.sceneEl.emit('difficultyOne');
+          setTimeout(() => {
+            assert.equal(el.children.length, 2);
+            el.sceneEl.emit('difficultyTwo');
+            setTimeout(() => {
+              assert.equal(el.children.length, 5);
+              assert.ok(el.querySelector('[data-difficulty="Easy"][data-bind-for-key="0"]'), 'e');
+              assert.ok(el.querySelector('[data-difficulty="Normal"][data-bind-for-key="1"]'), 'n');
+              assert.ok(el.querySelector('[data-difficulty="Hard"][data-bind-for-key="2"]'), 'h');
+              assert.ok(el.querySelector('[data-difficulty="Expert"][data-bind-for-key="3"]'), 'ex');
+              done();
+            });
+          });
+        });
+      });
+    });
+
+    test('renders added list item (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'shoppingList',
+        template: '#shoppingItemTemplate',
+        key: 'name',
+        updateInPlace: true
+      });
+      setTimeout(() => {
+        el.sceneEl.emit('shoppingListAdd');
+        setTimeout(() => {
+          assert.ok(el.children.length, 3);
+          assert.equal(el.children[2].getAttribute('text').value, 'bananas');
+          assert.equal(el.children[2].dataset.amount, 6);
+          done();
+        });
+      });
+    });
+
+    test('removes items (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'shoppingList',
+        template: '#shoppingItemTemplate',
+        key: 'name',
+        updateInPlace: true
+      });
+
+      assert.equal(el.children[0].getAttribute('data-bind-for-active'), 'true');
+      assert.equal(el.children[1].getAttribute('data-bind-for-active'), 'true');
+
+      setTimeout(() => {
+        el.sceneEl.emit('shoppingListRemove');
+
+        setTimeout(() => {
+          assert.equal(el.children.length, 2);
+
+          const inactive = el.querySelector('[data-bind-for-active="false"]');
+          assert.ok(!inactive.isPlaying);
+
+          const active = el.children[0] === inactive ? el.children[1] : el.children[0];
+          assert.equal(active.getAttribute('data-bind-for-active'), 'true');
+          assert.equal(active.getAttribute('text').value, 'milk');
+
+          done();
+        });
+      });
+    });
+
+    test('can bind to item (in place)', done => {
+      el.setAttribute('bind-for', {
+        for: 'item',
         in: 'shoppingList',
         template: '#shoppingItemTemplate2',
-        key: 'name'
+        key: 'name',
+        updateInPlace: true
       });
       setTimeout(() => {
         var milkEl;
@@ -522,6 +1095,69 @@ suite('state', function () {
           assert.equal(milkEl.getAttribute('text').value, '20');
           done();
         });
+      });
+    });
+
+    test('can initialize pool (in place)', done => {
+      const template = document.createElement('template');
+      template.setAttribute('id', 'difficultyTemplate');
+      template.innerHTML = '<a-entity class="difficulty" bind-item__text="value: item"></a-entity>';
+      el.sceneEl.appendChild(template);
+
+      setTimeout(() => {
+        el.setAttribute('bind-for', {
+          for: 'item',
+          in: 'difficulties',
+          template: '#difficultyTemplate',
+          updateInPlace: true,
+          pool: 3
+        });
+
+        setTimeout(() => {
+          assert.equal(el.querySelectorAll('[data-bind-for-active="false"]').length, 3);
+          el.sceneEl.emit('difficultyTwo');
+
+          setTimeout(() => {
+            assert.equal(el.querySelectorAll('[data-bind-for-active="true"]').length, 4);
+            assert.ok(el.querySelector('[data-bind-for-value="Easy"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Normal"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Hard"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Expert"]'));
+            done();
+          });
+        });
+      });
+    });
+
+    test('can render list with delay (in place)', done => {
+      const template = document.createElement('template');
+      template.setAttribute('id', 'difficultyTemplate');
+      template.innerHTML = '<a-entity class="difficulty" bind-item__text="value: item"></a-entity>';
+      el.sceneEl.appendChild(template);
+
+      setTimeout(() => {
+        el.setAttribute('bind-for', {
+          for: 'item',
+          in: 'difficulties',
+          template: '#difficultyTemplate',
+          updateInPlace: true,
+          pool: 3,
+          delay: 2
+        });
+
+        setTimeout(() => {
+          assert.equal(el.querySelectorAll('[data-bind-for-active="false"]').length, 3);
+          el.sceneEl.emit('difficultyTwo');
+
+          setTimeout(() => {
+            assert.equal(el.querySelectorAll('[data-bind-for-active="true"]').length, 4);
+            assert.ok(el.querySelector('[data-bind-for-value="Easy"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Normal"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Hard"]'));
+            assert.ok(el.querySelector('[data-bind-for-value="Expert"]'));
+            done();
+          }, 50);
+        }, 10);
       });
     });
   });
@@ -583,6 +1219,60 @@ suite('state', function () {
       ['foo', 'bar']);
   });
 
+  suite('bind-item', () => {
+    setup(done => {
+      const template = document.createElement('template');
+      template.setAttribute('id', 'shoppingItemTemplate');
+      template.innerHTML = `<a-entity></a-entity>`;
+      el.sceneEl.appendChild(template);
+      el.setAttribute('bind-for', {
+        for: 'item',
+        in: 'shoppingList',
+        key: 'name',
+        updateInPlace: true,
+        template: '#shoppingItemTemplate'
+      });
+
+      const itemEl = document.createElement('a-entity');
+      itemEl.setAttribute('data-bind-for-key', '');
+      el.appendChild(itemEl);
+
+      const childEl = document.createElement('a-entity');
+      itemEl.appendChild(childEl);
+      el = childEl;
+      setTimeout(() => { done(); });
+    });
+
+    test('handles comparisons', () => {
+      el.sceneEl.systems.state.state.activeItem = 'eggs';
+      el.setAttribute('data-bind-for-key', 'eggs');
+      el.setAttribute('bind-item__visible', 'activeItem !== item.name');
+      assert.equal(el.components['bind-item__visible'].select(
+        {name: 'eggs'}, 'activeItem !== item.name'), false);
+      assert.equal(el.components['bind-item__visible'].select(
+        {name: 'eggs'}, 'activeItem === item.name'), true);
+    });
+
+    test('parses multi-prop', () => {
+      var propertyMap;
+
+      el.setAttribute('bind-item__material', 'color: item.color; opacity: item.values.opacity');
+      propertyMap = el.components['bind-item__material'].propertyMap;
+      assert.equal(propertyMap['material.color'], 'item.color');
+      assert.equal(propertyMap['material.opacity'], 'item.values.opacity');
+
+      el.setAttribute('bind-item__text', 'value: foo.bar !== bar.foo');
+      propertyMap = el.components['bind-item__text'].propertyMap;
+      assert.equal(propertyMap['text.value'], 'foo.bar !== bar.foo');
+    });
+
+    test('parses data-attribute', () => {
+      el.setAttribute('bind-item__data-value', 'item.foo.bar.baz');
+      const propertyMap = el.components['bind-item__data-value'].propertyMap;
+      assert.equal(propertyMap['data-value'], 'item.foo.bar.baz');
+    });
+  });
+
   test('renderTemplate', () => {
     var rendered;
 
@@ -603,5 +1293,72 @@ suite('array', function () {
     arr.push(1);
     assert.equal(arr.__dirty, true);
     assert.equal(arr.length, 2);
+  });
+});
+
+suite('generateExpression', function () {
+  test('generates with basic selector', () => {
+    assert.equal(lib.generateExpression('foo'), 'state["foo"]');
+    assert.equal(lib.generateExpression('foo.bar'), 'state["foo"]["bar"]');
+    assert.equal(lib.generateExpression('foo.bar.baz'), 'state["foo"]["bar"]["baz"]');
+    assert.equal(lib.generateExpression('f1.f_2.f-3'), 'state["f1"]["f_2"]["f-3"]');
+  });
+
+  test('generates with ! and !!', () => {
+    assert.equal(lib.generateExpression('!foo'), '!state["foo"]');
+    assert.equal(lib.generateExpression('!!foo.bar'), '!!state["foo"]["bar"]');
+    assert.equal(lib.generateExpression('!foo.bar.baz'), '!state["foo"]["bar"]["baz"]');
+  });
+
+  test('generates with booleans', () => {
+    assert.equal(lib.generateExpression('foo || bar'), 'state["foo"] || state["bar"]');
+    assert.equal(lib.generateExpression('foo && bar'), 'state["foo"] && state["bar"]');
+    assert.equal(lib.generateExpression('foo.bar || qux.qaz'),
+                 'state["foo"]["bar"] || state["qux"]["qaz"]');
+  });
+
+  test('generates with comparisons', () => {
+    assert.equal(lib.generateExpression('foo === bar'), 'state["foo"] === state["bar"]');
+    assert.equal(lib.generateExpression('foo.bar === qux.qaz'),
+                 'state["foo"]["bar"] === state["qux"]["qaz"]');
+  });
+
+  test('generates with literal comparison', () => {
+    assert.equal(lib.generateExpression('foo > 0'), 'state["foo"] > 0');
+    assert.equal(lib.generateExpression('foo === 5'), 'state["foo"] === 5');
+    assert.equal(lib.generateExpression('foo === "bar"'), 'state["foo"] === "bar"');
+  });
+
+  test('generates with ternaries', () => {
+    assert.equal(lib.generateExpression('foo ? bar : "qaz"'),
+                 'state["foo"] ? state["bar"] : "qaz"');
+  });
+
+  test('generates with length', () => {
+    assert.equal(lib.generateExpression('a.length > 0'), 'state["a"]["length"] > 0');
+  });
+
+  test('generates with strings', () => {
+    assert.equal(lib.generateExpression("'foo' + bar + 'qux'"), `'foo' + state["bar"] + 'qux'`);
+  });
+
+  test('generates with comparision and double null', () => {
+    assert.equal(lib.generateExpression("a || b || c && !!d.length"), `state["a"] || state["b"] || state["c"] && !!state["d"]["length"]`);
+  });
+
+  test('preserves item selector', () => {
+    assert.equal(lib.generateExpression('item'), 'item');
+    assert.equal(lib.generateExpression('item.id'), 'item["id"]');
+    assert.equal(lib.generateExpression('item.id + item.bar'), 'item["id"] + item["bar"]');
+  });
+
+  test('preserves string whitespace', () => {
+    assert.equal(lib.generateExpression('foo + "a b c"'), 'state["foo"] + "a b c"');
+  });
+
+  test('handles boolean with parens', () => {
+    assert.equal(lib.generateExpression(
+      '(a || b) && (c || d)'),
+      '(state["a"] || state["b"]) && (state["c"] || state["d"])');
   });
 });

@@ -7,7 +7,7 @@ A controller haptics (vibrations) component for A-Frame. Supported by
 experimental [Gamepad
 Extensions](https://w3c.github.io/gamepad/extensions.html#dom-gamepadhapticactuator). [Read about browser support](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad/hapticActuators).
 
-[Demo](https://ngokevin.github.io/kframe/components/haptics/)
+[Demo](https://supermedium.com/superframe/components/haptics/)
 
 ### API
 
@@ -42,7 +42,7 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-haptics-component/dist/aframe-haptics-component.min.js"></script>
 </head>
 
