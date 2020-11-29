@@ -8,7 +8,7 @@ var State = {
   initialState: {},
   nonBindedStateKeys: [],
   handlers: {},
-  computeState: function () { /* no-op */ }
+  computeState: [function () { /* no-op */ }]
 };
 
 var STATE_UPDATE_EVENT = 'stateupdate';
@@ -16,7 +16,12 @@ var TYPE_OBJECT = 'object';
 var WHITESPACE_REGEX = /s+/;
 
 AFRAME.registerState = function (definition) {
-  AFRAME.utils.extend(State, definition);
+  const computeState = State.computeState;
+  if (definition.computeState) {
+    computeState.push(definition.computeState);
+  }
+  AFRAME.utils.extendDeep(State, definition);
+  State.computeState = computeState;
 }
 
 AFRAME.registerSystem('state', {
@@ -49,7 +54,9 @@ AFRAME.registerSystem('state', {
     this.el.addEventListener('loaded', () => {
       var i;
       // Initial compute.
-      State.computeState(this.state, '@@INIT');
+      for (i = 0; i < State.computeState.length; i++) {
+        State.computeState[i](this.state, '@@INIT');
+      }
       // Initial dispatch.
       for (i = 0; i < this.subscriptions.length; i++) {
         this.subscriptions[i].onStateUpdate(this.state);
@@ -61,6 +68,7 @@ AFRAME.registerSystem('state', {
    * Dispatch action.
    */
   dispatch: (function () {
+
     const toUpdate = [];
 
     return function (actionName, payload) {
@@ -68,12 +76,15 @@ AFRAME.registerSystem('state', {
       var i;
       var key;
       var subscription;
+      
 
       // Modify state.
       State.handlers[actionName](this.state, payload);
 
       // Post-compute.
-      State.computeState(this.state, actionName, payload);
+      for (i = 0; i < State.computeState.length; i++) {
+        State.computeState[i](this.state, actionName, payload);
+      }
 
       // Get a diff to optimize bind updates.
       for (key in this.diff) { delete this.diff[key]; }
@@ -87,7 +98,7 @@ AFRAME.registerSystem('state', {
       }
 
       // Notify subscriptions / binders.
-      toUpdate.length = 0;
+      let currentUpdateCount = 0;
       for (i = 0; i < this.subscriptions.length; i++) {
         if (this.subscriptions[i].name === 'bind-for') {
           // For arrays and bind-for, check __dirty flag on array rather than the diff.
@@ -100,12 +111,8 @@ AFRAME.registerSystem('state', {
         // Keep track to only update subscriptions once.
         if (toUpdate.indexOf(this.subscriptions[i]) === -1) {
           toUpdate.push(this.subscriptions[i]);
+          currentUpdateCount++;
         }
-      }
-
-      // Update subscriptions.
-      for (i = 0; i < toUpdate.length; i++) {
-        toUpdate[i].onStateUpdate();
       }
 
       // Unset array dirty.
@@ -117,6 +124,12 @@ AFRAME.registerSystem('state', {
 
       // Store last state.
       this.copyState(this.lastState, this.state);
+
+      // Update subscriptions.
+      for (i = 0; i < currentUpdateCount; i++) {
+        let subscriber = toUpdate.pop();
+        subscriber.onStateUpdate();
+      }
 
       // Emit.
       this.eventDetail.action = actionName;
@@ -157,7 +170,9 @@ AFRAME.registerSystem('state', {
   },
 
   unsubscribe: function (component) {
-    this.subscriptions.splice(this.subscriptions.indexOf(component), 1);
+    var i = this.subscriptions.indexOf(component);
+    if (i > -1)
+      this.subscriptions.splice(i, 1);
   },
 
   /**
@@ -280,7 +295,10 @@ AFRAME.registerComponent('bind', {
     this.system = this.el.sceneEl.systems.state;
 
     // Whether we are binding by namespace (e.g., bind__foo="prop1: true").
-    if (this.id) { componentId = lib.split(this.id, '__')[0]; }
+    if (this.id) {
+      componentId = lib.split(this.id, '__')[0];
+    }
+
     this.isNamespacedBind =
       this.id &&
       (componentId in AFRAME.components && !AFRAME.components[componentId].isSingleProp) ||

@@ -22,12 +22,14 @@ const WHITESPACE_RE = /\s/g;
 const STATE_SELECTOR_RE = /([=&|!?:+-])(\s*)([\(]?)([A-Za-z][\w_-]*)/g;
 const ROOT_STATE_SELECTOR_RE = /^([\(]?)([A-Za-z][\w_-]*)/g;
 const ITEM_RE = /state\["item"\]/g;
+const BOOLEAN_RE = /state\["(true|false)"\]/g;
 const STATE_STR = 'state';
 function generateExpression (str) {
   str = str.replace(DOT_NOTATION_RE, '["$1"]');
   str = str.replace(ROOT_STATE_SELECTOR_RE, '$1state["$2"]');
   str = str.replace(STATE_SELECTOR_RE, '$1$2$3state["$4"]');
   str = str.replace(ITEM_RE, 'item');
+  str = str.replace(BOOLEAN_RE, '$1');
   return str;
 }
 module.exports.generateExpression = generateExpression;
@@ -85,6 +87,7 @@ module.exports.composeFunctions = composeFunctions;
 
 var NO_WATCH_TOKENS = ['||', '&&', '!=', '!==', '==', '===', '>', '<', '<=', '>='];
 var WHITESPACE_PLUS_RE = /\s+/;
+var SYMBOLS = /\(|\)|\!/g;
 function parseKeysToWatch (keys, str, isBindItem) {
   var i;
   var tokens;
@@ -93,9 +96,10 @@ function parseKeysToWatch (keys, str, isBindItem) {
     if (NO_WATCH_TOKENS.indexOf(tokens[i]) === -1 && !tokens[i].startsWith("'") &&
         keys.indexOf(tokens[i]) === -1) {
       if (isBindItem && tokens[i] === 'item') { continue; }
-      keys.push(parseKeyToWatch(tokens[i]));
+      keys.push(parseKeyToWatch(tokens[i]).replace(SYMBOLS, ''));
     }
   }
+  return keys;
 }
 module.exports.parseKeysToWatch = parseKeysToWatch;
 

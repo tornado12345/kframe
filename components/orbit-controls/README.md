@@ -30,7 +30,7 @@ supports all the properties.
 | autoRotate         | Set to true to automatically rotate around the target.                                                                                                                                   | false                                |
 | autoRotateSpeed    | How fast to rotate around the target.                                                                                                                                                    | 2 (30 seconds per rotation at 60fps) |
 | dampingFactor      | Damping inertia if `enableDamping`.                                                                                                                                                      | 0.1                                  |
-| enabled            | Whether enabled.                                                                                                                                                                         | true                                 |
+| enabled            | Whether enabled. You can also call `.pause()` on the entity. | true                                 |
 | enableDamping      | Set to true to enable damping (inertia), which can be used to give a sense of weight to the controls.                                                                                    | true                                 |
 | enableKeys         | Enable arrow keys.                                                                                                                                                                       | true                                 |
 | enablePan          | Enable panning (i.e., right click drag or three finger drag).                                                                                                                            | true                                 |
@@ -61,7 +61,7 @@ Install and use by directly including the [browser files](dist):
 <head>
   <title>My A-Frame Scene</title>
   <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-orbit-controls@1.2.0/dist/aframe-orbit-controls.min.js"></script>
+  <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
   <script src="https://unpkg.com/aframe-supercraft-loader@1.1.3/dist/aframe-supercraft-loader.js"></script>
 </head>
 

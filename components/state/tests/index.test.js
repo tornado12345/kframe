@@ -1352,6 +1352,13 @@ suite('generateExpression', function () {
     assert.equal(lib.generateExpression('item.id + item.bar'), 'item["id"] + item["bar"]');
   });
 
+  test('preserves booleans', () => {
+    assert.equal(lib.generateExpression('true'), 'true');
+    assert.equal(lib.generateExpression('false'), 'false');
+    assert.equal(lib.generateExpression('a && true'), 'state["a"] && true');
+    assert.equal(lib.generateExpression('a && true || false'), 'state["a"] && true || false');
+  });
+
   test('preserves string whitespace', () => {
     assert.equal(lib.generateExpression('foo + "a b c"'), 'state["foo"] + "a b c"');
   });
@@ -1360,5 +1367,37 @@ suite('generateExpression', function () {
     assert.equal(lib.generateExpression(
       '(a || b) && (c || d)'),
       '(state["a"] || state["b"]) && (state["c"] || state["d"])');
+  });
+
+  suite('parseKeysToWatch', () => {
+    test('parses', () => {
+      assert.shallowDeepEqual(
+        lib.parseKeysToWatch([], 'foo'),
+        ['foo']);
+    });
+
+    test('parses with boolean operators', () => {
+      assert.shallowDeepEqual(
+        lib.parseKeysToWatch([], 'foo && bar || baz'),
+        ['foo', 'bar', 'baz']);
+    });
+
+    test('parses with parens', () => {
+      assert.shallowDeepEqual(
+        lib.parseKeysToWatch([], '(foo && bar) || (baz && qux)'),
+        ['foo', 'bar', 'baz', 'qux']);
+    });
+
+    test('parses with ternary', () => {
+      assert.shallowDeepEqual(
+        lib.parseKeysToWatch([], `(foo && bar) ? '5' : '10'`),
+        ['foo', 'bar']);
+    });
+
+    test('parses with not', () => {
+      assert.shallowDeepEqual(
+        lib.parseKeysToWatch([], `!foo || !!bar`),
+        ['foo', 'bar']);
+    });
   });
 });

@@ -13,7 +13,9 @@ v2 requires A-Frame v0.8.0.
 
 ### Examples
 
-- [BeatSaver Viewer](https://github.com/supermedium/beatsaver-viewer0
+- [Building UI Guide](https://glitch.com/~aframe-building-ui)
+- [Moon Rider](https://github.com/supermedium/moonrider)
+- [BeatSaver Viewer](https://github.com/supermedium/beatsaver-viewer)
 
 ### Usage
 
@@ -132,15 +134,16 @@ between every element). Then we have a `<template>` which will be used to
 render each individual item.
 
 Then we can bind properties to the individual array element either using the
-`bind` component, using the `for` value as the pointer (i.e.,
+`bind-item` component, using the `for` value as the pointer (i.e.,
 `shoppingItem.name`). Or we can use braces (`{{ }}`), which the `bind-for`
-component will statically interpolate the variable:
+component will statically interpolate the variable. We are moving to
+`updateInPlace: true` which will be more performant and caches entities:
 
 ```html
-<a-entity bind-for="for: shoppingItem; in: shoppingList; key: name">
+<a-entity bind-for="for: item; in: shoppingList; key: name; updateInPlace: true">
   <template>
-    <a-entity bind__text="value: shoppingItem.name"
-              data-amount="{{ shoppingItem.amount }}"></a-entity>
+    <a-entity bind-item__text="value: item.name"
+              data-amount="{{ amount }}"></a-entity>
   </template>
 </a-entity>
 ```
@@ -148,22 +151,23 @@ component will statically interpolate the variable:
 This will result in:
 
 ```html
-<a-entity bind-for="for: shoppingItem; in: shoppingList; key: name">
+<a-entity bind-for="for: item; in: shoppingList; key: name">
   <template>
     <!-- ... -->
   </template>
-  <a-entity bind__text="value: shoppingItem.name"
-            text="value: milk"
+  <a-entity bind-item__text="value: item.name"
             data-amount="2"
+            text="value: milk"
             data-bind-for-key="milk"></a-entity>
-  <a-entity bind__text="value: shoppingItem.name"
+  <a-entity bind__text="value: item.name"
+            bind-item__data-amount="item.amount"
             text="value: eggs"
             data-amount="12"
             data-bind-for-key="eggs"></a-entity>
 </a-entity>
 ```
 
-`bind-for` will automatically render new entities, remove old entities
+`bind-for` will automatically render new entities, deactivate old entities
 respective to changes in the array in the state. Updates are handled through
 individual `bind`s.
 
@@ -266,8 +270,8 @@ Install and use by directly including the [browser files](dist):
 ```html
 <head>
   <title>My A-Frame Scene</title>
-  <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-state-component@6.5.0/dist/aframe-state-component.min.js"></script>
+  <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-state-component@7.1.0/dist/aframe-state-component.min.js"></script>
   <script>
     AFRAME.registerState({
       initialState: {

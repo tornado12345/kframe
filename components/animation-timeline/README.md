@@ -186,7 +186,7 @@ Install and use by directly including the [browser files](dist):
   <title>My A-Frame Scene</title>
   <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-animation-component@^4.1.1/dist/aframe-animation-timeline-component.min.js"></script>
-  <script src="https://unpkg.com/aframe-animation-timeline-component@1.6.0/dist/aframe-animation-timeline-component.min.js"></script>
+  <script src="https://unpkg.com/aframe-animation-timeline-component@2.0.0/dist/aframe-animation-timeline-component.min.js"></script>
 </head>
 
 <body>
@@ -207,8 +207,8 @@ Install and use by directly including the [browser files](dist):
     </a-assets>
 
     <a-entity id="welcomeText"
-              animation-timeline__fadein="property: text.opacity; from: 0; to: 1; startEvents: null"
-              animation-timeline__fadeout="property: text.opacity; from: 1; to 0; startEvents: null"
+              animation__fadein="property: text.opacity; from: 0; to: 1; startEvents: null"
+              animation__fadeout="property: text.opacity; from: 1; to 0; startEvents: null"
               text="opacity: 0; value: Welcome to the dankest timeline."
               position="0 0 -3"></a-entity>
 

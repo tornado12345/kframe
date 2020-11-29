@@ -103,12 +103,14 @@ var WHITESPACE_RE = /\s/g;
 var STATE_SELECTOR_RE = /([=&|!?:+-])(\s*)([\(]?)([A-Za-z][\w_-]*)/g;
 var ROOT_STATE_SELECTOR_RE = /^([\(]?)([A-Za-z][\w_-]*)/g;
 var ITEM_RE = /state\["item"\]/g;
+var BOOLEAN_RE = /state\["(true|false)"\]/g;
 var STATE_STR = 'state';
 function generateExpression(str) {
   str = str.replace(DOT_NOTATION_RE, '["$1"]');
   str = str.replace(ROOT_STATE_SELECTOR_RE, '$1state["$2"]');
   str = str.replace(STATE_SELECTOR_RE, '$1$2$3state["$4"]');
   str = str.replace(ITEM_RE, 'item');
+  str = str.replace(BOOLEAN_RE, '$1');
   return str;
 }
 module.exports.generateExpression = generateExpression;
@@ -169,6 +171,7 @@ module.exports.composeFunctions = composeFunctions;
 
 var NO_WATCH_TOKENS = ['||', '&&', '!=', '!==', '==', '===', '>', '<', '<=', '>='];
 var WHITESPACE_PLUS_RE = /\s+/;
+var SYMBOLS = /\(|\)|\!/g;
 function parseKeysToWatch(keys, str, isBindItem) {
   var i;
   var tokens;
@@ -178,9 +181,10 @@ function parseKeysToWatch(keys, str, isBindItem) {
       if (isBindItem && tokens[i] === 'item') {
         continue;
       }
-      keys.push(parseKeyToWatch(tokens[i]));
+      keys.push(parseKeyToWatch(tokens[i]).replace(SYMBOLS, ''));
     }
   }
+  return keys;
 }
 module.exports.parseKeysToWatch = parseKeysToWatch;
 
@@ -247,7 +251,7 @@ var State = {
   initialState: {},
   nonBindedStateKeys: [],
   handlers: {},
-  computeState: function computeState() {/* no-op */}
+  computeState: [function () {/* no-op */}]
 };
 
 var STATE_UPDATE_EVENT = 'stateupdate';
@@ -255,7 +259,12 @@ var TYPE_OBJECT = 'object';
 var WHITESPACE_REGEX = /s+/;
 
 AFRAME.registerState = function (definition) {
-  AFRAME.utils.extend(State, definition);
+  var computeState = State.computeState;
+  if (definition.computeState) {
+    computeState.push(definition.computeState);
+  }
+  AFRAME.utils.extendDeep(State, definition);
+  State.computeState = computeState;
 };
 
 AFRAME.registerSystem('state', {
@@ -290,7 +299,9 @@ AFRAME.registerSystem('state', {
     this.el.addEventListener('loaded', function () {
       var i;
       // Initial compute.
-      State.computeState(_this.state, '@@INIT');
+      for (i = 0; i < State.computeState.length; i++) {
+        State.computeState[i](_this.state, '@@INIT');
+      }
       // Initial dispatch.
       for (i = 0; i < _this.subscriptions.length; i++) {
         _this.subscriptions[i].onStateUpdate(_this.state);
@@ -314,7 +325,9 @@ AFRAME.registerSystem('state', {
       State.handlers[actionName](this.state, payload);
 
       // Post-compute.
-      State.computeState(this.state, actionName, payload);
+      for (i = 0; i < State.computeState.length; i++) {
+        State.computeState[i](this.state, actionName, payload);
+      }
 
       // Get a diff to optimize bind updates.
       for (key in this.diff) {
@@ -405,7 +418,8 @@ AFRAME.registerSystem('state', {
   },
 
   unsubscribe: function unsubscribe(component) {
-    this.subscriptions.splice(this.subscriptions.indexOf(component), 1);
+    var i = this.subscriptions.indexOf(component);
+    if (i > -1) this.subscriptions.splice(i, 1);
   },
 
   /**
@@ -537,6 +551,7 @@ AFRAME.registerComponent('bind', {
     if (this.id) {
       componentId = lib.split(this.id, '__')[0];
     }
+
     this.isNamespacedBind = this.id && componentId in AFRAME.components && !AFRAME.components[componentId].isSingleProp || componentId in AFRAME.systems;
 
     this.lastData = {};
@@ -1026,6 +1041,10 @@ AFRAME.registerComponent('bind-for', {
     } else {
       this.onStateUpdateNaive();
     }
+  },
+
+  remove: function remove() {
+    this.el.sceneEl.systems.state.unsubscribe(this);
   }
 });
 
@@ -1120,6 +1139,10 @@ AFRAME.registerComponent('bind-item', {
 
     propertyMap[this.id] = this.data;
     lib.parseKeysToWatch(this.keysToWatch, this.data, true);
+  },
+
+  remove: function remove() {
+    this.el.sceneEl.systems.state.unsubscribe(this);
   }
 });
 
